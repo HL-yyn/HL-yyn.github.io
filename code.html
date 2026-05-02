@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>长链推理协同运营自动化系统</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+SC:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07090d;
+  --surface: #0e1117;
+  --surface-2: #151a24;
+  --surface-3: #1c2230;
+  --border: #1e2536;
+  --accent: #00e5a0;
+  --accent-dim: #00e5a033;
+  --accent-glow: #00e5a066;
+  --warning: #ff6b35;
+  --info: #3b82f6;
+  --critical: #ef4444;
+  --text: #e8eaf0;
+  --text-muted: #5a6380;
+  --text-dim: #3a4260;
+  --agent-1: #00e5a0;
+  --agent-2: #a78bfa;
+  --agent-3: #f59e0b;
+  --agent-4: #ec4899;
+  --agent-5: #06b6d4;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans SC', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 15% 20%, #00e5a008 0%, transparent 50%),
+    radial-gradient(ellipse at 85% 80%, #a78bfa06 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, #3b82f604 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Grid overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 60px 60px;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* Header */
+.header {
+  padding: 20px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(20px);
+  background: var(--bg)ee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.header-left { display: flex; align-items: center; gap: 16px; }
+
+.logo {
+  width: 36px; height: 36px;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent);
+  position: relative;
+  overflow: hidden;
+}
+
+.logo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent);
+  opacity: 0.1;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.header-title span {
+  color: var(--accent);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  margin-left: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.header-right { display: flex; align-items: center; gap: 16px; }
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: 'Space Mono', monospace;
+  color: var(--text-muted);
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent-glow); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
+}
+
+.time-display {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+/* Main Layout */
+.main {
+  display: grid;
+  grid-template-columns: 280px 1fr 320px;
+  grid-template-rows: auto 1fr;
+  gap: 1px;
+  background: var(--border);
+  min-height: calc(100vh - 73px);
+}
+
+/* Panel base */
+.panel {
+  background: var(--bg);
+  padding: 20px;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+}
+
+.panel-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+/* Left Panel - Agent List */
+.agents-panel {
+  grid-row: 1 / 3;
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+.agent-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.agent-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+
+.agent-card[data-agent="planner"]::before { background: var(--agent-1); }
+.agent-card[data-agent="executor"]::before { background: var(--agent-2); }
+.agent-card[data-agent="reviewer"]::before { background: var(--agent-3); }
+.agent-card[data-agent="monitor"]::before { background: var(--agent-4); }
+.agent-card[data-agent="optimizer"]::before { background: var(--agent-5); }
+
+.agent-card:hover {
+  border-color: var(--accent-dim);
+  transform: translateX(4px);
+  background: var(--surface-2);
+}
+
+.agent-card.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 20px var(--accent-dim);
+}
+
+.agent-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.agent-name {
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.agent-icon {
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+
+.agent-status {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+.agent-status.running { background: #00e5a020; color: var(--accent); }
+.agent-status.idle { background: #5a638020; color: var(--text-muted); }
+.agent-status.waiting { background: #f59e0b20; color: var(--agent-3); }
+
+.agent-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.agent-tokens {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+/* Center - Chain Visualization */
+.chain-panel {
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+/* Stats bar */
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+}
+
+.stat-card:nth-child(1)::after { background: var(--accent); }
+.stat-card:nth-child(2)::after { background: var(--info); }
+.stat-card:nth-child(3)::after { background: var(--agent-3); }
+.stat-card:nth-child(4)::after { background: var(--agent-4); }
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 900;
+  font-family: 'Space Mono', monospace;
+  line-height: 1;
+}
+
+.stat-card:nth-child(1) .stat-value { color: var(--accent); }
+.stat-card:nth-child(2) .stat-value { color: var(--info); }
+.stat-card:nth-child(3) .stat-value { color: var(--agent-3); }
+.stat-card:nth-child(4) .stat-value { color: var(--agent-4); }
+
+.stat-change {
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  margin-top: 4px;
+  color: var(--text-dim);
+}
+
+.stat-change.up { color: var(--accent); }
+.stat-change.down { color: var(--critical); }
+
+/* Chain Steps */
+.chain-container {
+  position: relative;
+}
+
+.chain-step {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 4px;
+  position: relative;
+  animation: stepIn 0.5s ease forwards;
+  opacity: 0;
+}
+
+.chain-step:nth-child(1) { animation-delay: 0.1s; }
+.chain-step:nth-child(2) { animation-delay: 0.25s; }
+.chain-step:nth-child(3) { animation-delay: 0.4s; }
+.chain-step:nth-child(4) { animation-delay: 0.55s; }
+.chain-step:nth-child(5) { animation-delay: 0.7s; }
+.chain-step:nth-child(6) { animation-delay: 0.85s; }
+.chain-step:nth-child(7) { animation-delay: 1.0s; }
+.chain-step:nth-child(8) { animation-delay: 1.15s; }
+
+@keyframes stepIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.step-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 40px;
+  flex-shrink: 0;
+}
+
+.step-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  border: 2px solid;
+  background: var(--bg);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+.step-line {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  background: var(--border);
+}
+
+.step-content {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.step-content:hover {
+  border-color: var(--text-dim);
+  background: var(--surface-2);
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.step-agent-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+.step-time {
+  font-size: 10px;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+}
+
+.step-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.step-reasoning {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  line-height: 1.7;
+}
+
+.step-reasoning .label {
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.step-tokens {
+  margin-top: 8px;
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: var(--text-dim);
+}
+
+/* Connector arrows between agents */
+.agent-flow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  color: var(--text-dim);
+}
+
+.flow-arrow {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+/* Right Panel - Logs & Metrics */
+.logs-panel {
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+.log-entry {
+  padding: 10px 12px;
+  border-left: 2px solid var(--border);
+  margin-bottom: 2px;
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  line-height: 1.6;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.log-entry:hover {
+  background: var(--surface);
+  border-left-color: var(--accent);
+}
+
+.log-entry .log-time {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.log-entry .log-level {
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  margin: 0 4px;
+}
+
+.log-entry .log-level.info { background: #3b82f620; color: var(--info); }
+.log-entry .log-level.success { background: #00e5a020; color: var(--accent); }
+.log-entry .log-level.warn { background: #f59e0b20; color: var(--agent-3); }
+.log-entry .log-level.error { background: #ef444420; color: var(--critical); }
+
+/* Token usage chart */
+.token-chart {
+  margin-bottom: 20px;
+}
+
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  padding: 8px 0;
+}
+
+.chart-bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  min-height: 4px;
+  transition: height 0.6s ease;
+  position: relative;
+}
+
+.chart-bar:hover {
+  opacity: 0.8;
+}
+
+.chart-bar::after {
+  content: attr(data-val);
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  font-family: 'Space Mono', monospace;
+  color: var(--text-dim);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.chart-bar:hover::after { opacity: 1; }
+
+.chart-labels {
+  display: flex;
+  gap: 4px;
+  font-size: 8px;
+  font-family: 'Space Mono', monospace;
+  color: var(--text-dim);
+}
+
+.chart-labels span { flex: 1; text-align: center; }
+
+/* Metrics */
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.metric-row:last-child { border-bottom: none; }
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.metric-value {
+  font-size: 12px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+
+.metric-bar-bg {
+  width: 60px;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-left: 8px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+/* Task list in right panel */
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.task-item:hover {
+  border-color: var(--accent-dim);
+}
+
+.task-check {
+  width: 16px; height: 16px;
+  border: 2px solid var(--text-dim);
+  border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.task-check.done {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg);
+}
+
+.task-info { flex: 1; }
+
+.task-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.task-detail {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+
+.btn.primary:hover {
+  background: transparent;
+  color: var(--accent);
+}
+
+/* Section separator */
+.section-sep {
+  margin: 20px 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  .agents-panel, .logs-panel {
+    max-height: none;
+  }
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Typing animation */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  background: var(--accent);
+  margin-left: 2px;
+  animation: blink 1s infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Live indicator */
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #ef444420;
+  border: 1px solid #ef444440;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  color: var(--critical);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.live-dot {
+  width: 6px; height: 6px;
+  background: var(--critical);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+/* Data flow animation */
+@keyframes flowDown {
+  from { background-position: 0 0; }
+  to { background-position: 0 60px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo">LC</div>
+      <div class="header-title">
+        长链推理协同运营自动化系统
+        <span>v2.4.1</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div> LIVE</div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        5 Agents Active
+      </div>
+      <div class="time-display" id="currentTime">--:--:--</div>
+    </div>
+  </header>
+
+  <!-- Main Grid -->
+  <div class="main">
+    <!-- Left: Agent Panel -->
+    <div class="panel agents-panel">
+      <div class="panel-header">
+        <div class="panel-title">Agent 编排</div>
+        <div class="panel-badge" style="background:var(--accent-dim);color:var(--accent);">5 / 5</div>
+      </div>
+
+      <div class="agent-card active" data-agent="planner">
+        <div class="agent-card-top">
+          <div class="agent-name">
+            <div class="agent-icon" style="background:#00e5a020;color:var(--agent-1);">P</div>
+            规划 Agent
+          </div>
+          <div class="agent-status running">运行中</div>
+        </div>
+        <div class="agent-meta">负责任务分解、推理链编排、子任务调度</div>
+        <div class="agent-tokens">Tokens: 1,284,560 | 调用: 342</div>
+      </div>
+
+      <div class="agent-card" data-agent="executor">
+        <div class="agent-card-top">
+          <div class="agent-name">
+            <div class="agent-icon" style="background:#a78bfa20;color:var(--agent-2);">E</div>
+            执行 Agent
+          </div>
+          <div class="agent-status running">运行中</div>
+        </div>
+        <div class="agent-meta">内容生成、数据抓取、API调用、表单填写</div>
+        <div class="agent-tokens">Tokens: 2,847,200 | 调用: 891</div>
+      </div>
+
+      <div class="agent-card" data-agent="reviewer">
+        <div class="agent-card-top">
+          <div class="agent-name">
+            <div class="agent-icon" style="background:#f59e0b20;color:var(--agent-3);">R</div>
+            审核 Agent
+          </div>
+          <div class="agent-status waiting">等待中</div>
+        </div>
+        <div class="agent-meta">质量校验、合规检测、输出评分、反馈修正</div>
+        <div class="agent-tokens">Tokens: 956,800 | 调用: 267</div>
+      </div>
+
+      <div class="agent-card" data-agent="monitor">
+        <div class="agent-card-top">
+          <div class="agent-name">
+            <div class="agent-icon" style="background:#ec489920;color:var(--agent-4);">M</div>
+            监控 Agent
+          </div>
+          <div class="agent-status running">运行中</div>
+        </div>
+        <div class="agent-meta">实时监控、异常告警、资源调度、日志记录</div>
+        <div class="agent-tokens">Tokens: 412,300 | 调用: 1,205</div>
+      </div>
+
+      <div class="agent-card" data-agent="optimizer">
+        <div class="agent-card-top">
+          <div class="agent-name">
+            <div class="agent-icon" style="background:#06b6d420;color:var(--agent-5);">O</div>
+            优化 Agent
+          </div>
+          <div class="agent-status idle">空闲</div>
+        </div>
+        <div class="agent-meta">Prompt优化、推理路径分析、成本控制、策略迭代</div>
+        <div class="agent-tokens">Tokens: 678,400 | 调用: 156</div>
+      </div>
+
+      <div class="section-sep">
+        <div class="panel-title" style="margin-bottom:12px;">待执行任务队列</div>
+        <div class="task-item">
+          <div class="task-check done">&#10003;</div>
+          <div class="task-info">
+            <div class="task-name">用户行为数据采集</div>
+            <div class="task-detail">已完成 · 耗时 2.3s</div>
+          </div>
+        </div>
+        <div class="task-item">
+          <div class="task-check done">&#10003;</div>
+          <div class="task-info">
+            <div class="task-name">内容策略生成</div>
+            <div class="task-detail">已完成 · 耗时 5.1s</div>
+          </div>
+        </div>
+        <div class="task-item">
+          <div class="task-check" style="border-color:var(--accent);"></div>
+          <div class="task-info">
+            <div class="task-name">多渠道分发执行</div>
+            <div class="task-detail">执行中 · 进度 67%</div>
+          </div>
+        </div>
+        <div class="task-item">
+          <div class="task-check"></div>
+          <div class="task-info">
+            <div class="task-name">效果评估与反馈</div>
+            <div class="task-detail">等待中</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Chain Visualization -->
+    <div class="panel chain-panel">
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <div class="stat-label">今日 Token 消耗</div>
+          <div class="stat-value" id="tokenCount">6.18M</div>
+          <div class="stat-change up">↑ 12.3% vs 昨日</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">完成任务数</div>
+          <div class="stat-value" id="taskCount">1,847</div>
+          <div class="stat-change up">↑ 8.7% vs 昨日</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">平均推理深度</div>
+          <div class="stat-value">7.2</div>
+          <div class="stat-change">链路平均步数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">任务成功率</div>
+          <div class="stat-value">97.3%</div>
+          <div class="stat-change up">↑ 1.2% vs 上周</div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button class="btn primary" onclick="startNewChain()">启动新推理链</button>
+        <button class="btn" onclick="pauseChain()">暂停</button>
+        <button class="btn">导出日志</button>
+        <button class="btn">配置参数</button>
+      </div>
+
+      <!-- Chain Steps -->
+      <div class="panel-header">
+        <div class="panel-title">推理链执行视图</div>
+        <div class="live-badge"><div class="live-dot"></div> 实时推理</div>
+      </div>
+
+      <div class="chain-container" id="chainContainer">
+        <!-- Step 1 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-1);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#00e5a020;color:var(--agent-1);">规划 Agent</div>
+              <div class="step-time">00:00.124</div>
+            </div>
+            <div class="step-title">任务理解与目标分解</div>
+            <div class="step-desc">解析运营需求："提升公众号文章打开率"，分解为 4 个子目标：标题优化、推送时间、封面设计、用户画像匹配。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #1</span>
+              目标 → 历史数据分析 → 关键变量识别 → 子任务拆解 → 优先级排序 → 输出任务图
+            </div>
+            <div class="step-tokens">
+              <span>Input: 2,340 tokens</span>
+              <span>Output: 1,870 tokens</span>
+              <span>推理步数: 6</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-4);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#ec489920;color:var(--agent-4);">监控 Agent</div>
+              <div class="step-time">00:01.430</div>
+            </div>
+            <div class="step-title">历史数据采集与用户画像构建</div>
+            <div class="step-desc">抓取近 30 天公众号后台数据，分析 12,847 条阅读记录，提取高打开率文章特征向量。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #2</span>
+              数据源连接 → Schema 映射 → 特征提取 → 异常值过滤 → 聚类分析 → 画像生成
+            </div>
+            <div class="step-tokens">
+              <span>Input: 5,120 tokens</span>
+              <span>Output: 3,460 tokens</span>
+              <span>推理步数: 8</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-2);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#a78bfa20;color:var(--agent-2);">执行 Agent</div>
+              <div class="step-time">00:03.210</div>
+            </div>
+            <div class="step-title">标题 A/B 方案批量生成</div>
+            <div class="step-desc">基于画像特征和历史爆款标题模式，生成 20 组标题候选方案，每组包含 3 个变体，覆盖情感型、悬念型、数据型三种风格。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #3</span>
+              画像输入 → 风格模板匹配 → 情感词库检索 → 多候选生成 → 重复检测 → 多样性评分 → Top20 筛选
+            </div>
+            <div class="step-tokens">
+              <span>Input: 8,900 tokens</span>
+              <span>Output: 12,400 tokens</span>
+              <span>推理步数: 10</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-3);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#f59e0b20;color:var(--agent-3);">审核 Agent</div>
+              <div class="step-time">00:04.870</div>
+            </div>
+            <div class="step-title">内容合规审核与质量评分</div>
+            <div class="step-desc">对 60 个标题变体进行合规检测（敏感词、夸大宣传、版权风险），输出质量评分和修改建议，淘汰 8 个不合规方案。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #4</span>
+              敏感词库匹配 → 语义合规判定 → 情感极性分析 → 吸引力评分 → 风险标记 → 综合排序
+            </div>
+            <div class="step-tokens">
+              <span>Input: 15,200 tokens</span>
+              <span>Output: 6,800 tokens</span>
+              <span>推理步数: 7</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-1);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#00e5a020;color:var(--agent-1);">规划 Agent</div>
+              <div class="step-time">00:05.120</div>
+            </div>
+            <div class="step-title">推送时间策略决策</div>
+            <div class="step-desc">综合用户活跃时段数据、竞品发布时间、历史打开率峰值，决策最优推送时间窗口为周二/周四 20:00-21:30。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #5</span>
+              活跃度时序分析 → 竞品监测 → 历史最优回溯 → 时间窗口评分 → 约束条件校验 → 策略输出
+            </div>
+            <div class="step-tokens">
+              <span>Input: 4,500 tokens</span>
+              <span>Output: 2,100 tokens</span>
+              <span>推理步数: 6</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-2);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#a78bfa20;color:var(--agent-2);">执行 Agent</div>
+              <div class="step-time">00:06.540</div>
+            </div>
+            <div class="step-title">封面图与摘要自动生成</div>
+            <div class="step-desc">为 Top 5 标题方案生成配套封面图描述 Prompt，调用图像生成 API 输出候选封面，同步生成文章摘要。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #6</span>
+              标题语义解析 → 视觉风格匹配 → Prompt 构造 → API 调用 → 图片质量校验 → 摘要生成 → 关联绑定
+            </div>
+            <div class="step-tokens">
+              <span>Input: 6,800 tokens</span>
+              <span>Output: 4,200 tokens</span>
+              <span>推理步数: 9</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-5);"></div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#06b6d420;color:var(--agent-5);">优化 Agent</div>
+              <div class="step-time">00:07.890</div>
+            </div>
+            <div class="step-title">推理路径回溯与策略优化</div>
+            <div class="step-desc">分析本轮推理链路效率，识别 Step#3 标题生成环节 token 消耗偏高（12.4k），建议引入 Few-shot 模板压缩至 8k 以内。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #7</span>
+              Token 分布分析 → 瓶颈识别 → 历史最优对比 → 压缩策略生成 → A/B 方案设计 → 更新配置
+            </div>
+            <div class="step-tokens">
+              <span>Input: 3,200 tokens</span>
+              <span>Output: 2,800 tokens</span>
+              <span>推理步数: 5</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="chain-step">
+          <div class="step-timeline">
+            <div class="step-dot" style="border-color:var(--agent-4);"></div>
+            <div class="step-line" style="background:transparent;"></div>
+          </div>
+          <div class="step-content" style="border-color:var(--accent);box-shadow:0 0 20px var(--accent-dim);">
+            <div class="step-header">
+              <div class="step-agent-tag" style="background:#ec489920;color:var(--agent-4);">监控 Agent</div>
+              <div class="step-time">00:08.320 <span class="typing-cursor"></span></div>
+            </div>
+            <div class="step-title">最终输出打包与分发调度</div>
+            <div class="step-desc">整合全部产出物（标题×5 + 封面×5 + 摘要×5 + 推送时间表），生成运营排期表，推送至企微/飞书通知运营团队。</div>
+            <div class="step-reasoning">
+              <span class="label">推理链路 #8</span>
+              产出物聚合 → 格式标准化 → 排期生成 → 通知路由 → 确认回执 → 闭环标记
+            </div>
+            <div class="step-tokens">
+              <span>Input: 9,600 tokens</span>
+              <span>Output: 5,400 tokens</span>
+              <span>推理步数: 7</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Logs & Metrics -->
+    <div class="panel logs-panel">
+      <div class="panel-header">
+        <div class="panel-title">Token 消耗分布</div>
+      </div>
+
+      <div class="token-chart">
+        <div class="chart-bars">
+          <div class="chart-bar" style="height:45%;background:var(--agent-1);" data-val="1.28M"></div>
+          <div class="chart-bar" style="height:85%;background:var(--agent-2);" data-val="2.85M"></div>
+          <div class="chart-bar" style="height:32%;background:var(--agent-3);" data-val="0.96M"></div>
+          <div class="chart-bar" style="height:18%;background:var(--agent-4);" data-val="0.41M"></div>
+          <div class="chart-bar" style="height:25%;background:var(--agent-5);" data-val="0.68M"></div>
+          <div class="chart-bar" style="height:55%;background:var(--agent-1);" data-val="1.52M"></div>
+          <div class="chart-bar" style="height:72%;background:var(--agent-2);" data-val="2.31M"></div>
+          <div class="chart-bar" style="height:40%;background:var(--agent-3);" data-val="1.12M"></div>
+          <div class="chart-bar" style="height:60%;background:var(--agent-4);" data-val="1.78M"></div>
+          <div class="chart-bar" style="height:35%;background:var(--agent-5);" data-val="0.94M"></div>
+          <div class="chart-bar" style="height:90%;background:var(--agent-2);" data-val="3.12M"></div>
+          <div class="chart-bar" style="height:50%;background:var(--agent-1);" data-val="1.45M"></div>
+        </div>
+        <div class="chart-labels">
+          <span>00</span><span>02</span><span>04</span><span>06</span><span>08</span><span>10</span>
+          <span>12</span><span>14</span><span>16</span><span>18</span><span>20</span><span>22</span>
+        </div>
+      </div>
+
+      <div class="section-sep">
+        <div class="panel-title" style="margin-bottom:12px;">系统指标</div>
+        <div class="metric-row">
+          <span class="metric-label">推理延迟 (P95)</span>
+          <span class="metric-value">1.24s</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">并发 Agent 数</span>
+          <span class="metric-value">5 / 8</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Token 缓存命中率</span>
+          <span class="metric-value">
+            78.4%
+            <span class="metric-bar-bg"><span class="metric-bar-fill" style="width:78%;background:var(--accent);"></span></span>
+          </span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">推理链完成率</span>
+          <span class="metric-value">
+            97.3%
+            <span class="metric-bar-bg"><span class="metric-bar-fill" style="width:97%;background:var(--info);"></span></span>
+          </span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Agent 间通信延迟</span>
+          <span class="metric-value">23ms</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">日均成本</span>
+          <span class="metric-value">¥127.40</span>
+        </div>
+      </div>
+
+      <div class="section-sep">
+        <div class="panel-header" style="margin-bottom:12px;">
+          <div class="panel-title">实时日志</div>
+          <div class="panel-badge" style="background:var(--surface-3);color:var(--text-dim);">最新 20 条</div>
+        </div>
+
+        <div id="logContainer">
+          <div class="log-entry">
+            <span class="log-time">20:32:14</span>
+            <span class="log-level success">OK</span>
+            [监控] 推送通知已发送至企微群
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:32:13</span>
+            <span class="log-level info">INFO</span>
+            [执行] 封面图 #3 生成完成，分辨率 900×383
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:32:11</span>
+            <span class="log-level warn">WARN</span>
+            [优化] Step#3 token 消耗偏高，建议压缩
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:32:09</span>
+            <span class="log-level success">OK</span>
+            [审核] 52/60 标题通过合规检测
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:32:07</span>
+            <span class="log-level info">INFO</span>
+            [规划] 推送时间窗口确定：周二/四 20:00-21:30
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:32:05</span>
+            <span class="log-level info">INFO</span>
+            [执行] 标题候选方案生成完毕，共 60 个变体
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:32:02</span>
+            <span class="log-level success">OK</span>
+            [监控] 用户画像构建完成，聚类 5 个分群
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:31:58</span>
+            <span class="log-level info">INFO</span>
+            [监控] 数据采集完毕，12,847 条记录已加载
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:31:55</span>
+            <span class="log-level info">INFO</span>
+            [规划] 任务分解完成，生成 4 个子任务
+          </div>
+          <div class="log-entry">
+            <span class="log-time">20:31:54</span>
+            <span class="log-level success">OK</span>
+            [系统] 推理链 #847 启动，目标：提升打开率
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Time display
+function updateTime() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  document.getElementById('currentTime').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateTime, 1000);
+updateTime();
+
+// Simulate token counter
+let tokenBase = 6180000;
+function animateTokens() {
+  tokenBase += Math.floor(Math.random() * 3000 + 500);
+  const formatted = (tokenBase / 1000000).toFixed(2) + 'M';
+  document.getElementById('tokenCount').textContent = formatted;
+}
+setInterval(animateTokens, 2000);
+
+// Simulate task counter
+let taskBase = 1847;
+function animateTasks() {
+  if (Math.random() > 0.6) {
+    taskBase++;
+    document.getElementById('taskCount').textContent = taskBase.toLocaleString();
+  }
+}
+setInterval(animateTasks, 3000);
+
+// Agent card interaction
+document.querySelectorAll('.agent-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+  });
+});
+
+// Live log simulation
+const logMessages = [
+  { level: 'info', agent: '规划', msg: '推理路径权重更新完成' },
+  { level: 'success', agent: '执行', msg: 'API 调用成功，响应 200ms' },
+  { level: 'info', agent: '监控', msg: '系统资源使用率: CPU 34%, MEM 62%' },
+  { level: 'warn', agent: '优化', msg: '检测到重复推理路径，已合并' },
+  { level: 'success', agent: '审核', msg: '批次 #23 审核通过' },
+  { level: 'info', agent: '执行', msg: '开始生成第 4 组封面图' },
+  { level: 'success', agent: '监控', msg: '心跳检测正常，所有 Agent 在线' },
+  { level: 'info', agent: '规划', msg: '子任务 #3 优先级调整为 HIGH' },
+  { level: 'warn', agent: '审核', msg: '标题 #17 存在夸大嫌疑，已标记' },
+  { level: 'success', agent: '优化', msg: 'Prompt 模板缓存已更新' },
+];
+
+function addLog() {
+  const container = document.getElementById('logContainer');
+  const entry = logMessages[Math.floor(Math.random() * logMessages.length)];
+  const now = new Date();
+  const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+
+  const div = document.createElement('div');
+  div.className = 'log-entry';
+  div.style.opacity = '0';
+  div.style.transform = 'translateX(10px)';
+  div.innerHTML = `<span class="log-time">${time}</span> <span class="log-level ${entry.level}">${entry.level.toUpperCase().padEnd(4)}</span> [${entry.agent}] ${entry.msg}`;
+
+  container.insertBefore(div, container.firstChild);
+
+  requestAnimationFrame(() => {
+    div.style.transition = 'all 0.3s ease';
+    div.style.opacity = '1';
+    div.style.transform = 'translateX(0)';
+  });
+
+  // Keep max 20 logs
+  while (container.children.length > 20) {
+    container.removeChild(container.lastChild);
+  }
+}
+setInterval(addLog, 4000);
+
+// New chain button
+function startNewChain() {
+  const container = document.getElementById('chainContainer');
+  const steps = container.querySelectorAll('.chain-step');
+  steps.forEach((step, i) => {
+    step.style.animation = 'none';
+    step.offsetHeight; // reflow
+    step.style.animation = `stepIn 0.5s ease forwards`;
+    step.style.animationDelay = `${i * 0.15}s`;
+    step.style.opacity = '0';
+  });
+}
+
+function pauseChain() {
+  // Visual feedback
+  event.target.textContent = event.target.textContent === '暂停' ? '继续' : '暂停';
+}
+</script>
+</body>
+</html>
